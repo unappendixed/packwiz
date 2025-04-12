@@ -1,8 +1,10 @@
 package cmd
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
+	"path"
 	"sort"
 	"strings"
 
@@ -61,8 +63,52 @@ var listCmd = &cobra.Command{
 			return strings.ToLower(mods[i].Name) < strings.ToLower(mods[j].Name)
 		})
 
+
+
 		// Print mods
-		if viper.GetBool("list.version") {
+        if viper.GetBool("list.json") {
+
+            type modInfo struct {
+                Name string `json:"name"`
+                FileName string `json:"fileName"`
+                Source string `json:"source"`
+                Slug string `json:"slug"`
+                DownloadUrl string `json:"downloadUrl"`
+            }
+
+            modInfos := make([]modInfo, 0, len(mods))
+
+
+            for _, mod := range mods {
+                _, metaPath := path.Split(mod.GetFilePath())
+                updateKeys := make([]string, 0, len(mod.Update))
+
+                for k := range mod.Update {
+                    updateKeys = append(updateKeys, k)
+                }
+
+                source := strings.Join(updateKeys, ", ")
+
+                info := modInfo{
+                    Name: mod.Name,
+                    FileName: mod.FileName,
+                    Slug: strings.ReplaceAll(metaPath, ".pw.toml", ""),
+                    Source: source,
+                    DownloadUrl: mod.Download.URL,
+                }
+
+                modInfos = append(modInfos, info)
+            }
+
+            output, err := json.MarshalIndent(modInfos, "", strings.Repeat(" ", 4))
+            if err != nil {
+                fmt.Println("Error outputting json")
+                return
+            }
+
+            fmt.Println(string(output))
+
+        } else if viper.GetBool("list.version") {
 			for _, mod := range mods {
 				fmt.Printf("%s (%s)\n", mod.Name, mod.FileName)
 			}
@@ -77,9 +123,11 @@ var listCmd = &cobra.Command{
 func init() {
 	rootCmd.AddCommand(listCmd)
 
-	listCmd.Flags().BoolP("version", "v", false, "Print name and version")
+	listCmd.Flags().BoolP("version", "v", false, "Print version")
 	_ = viper.BindPFlag("list.version", listCmd.Flags().Lookup("version"))
 	listCmd.Flags().StringP("side", "s", "", "Filter mods by side (e.g., client or server)")
 	_ = viper.BindPFlag("list.side", listCmd.Flags().Lookup("side"))
+    listCmd.Flags().BoolP("json", "j", false, "Print mod information as json")
+    _ = viper.BindPFlag("list.json", listCmd.Flags().Lookup("json"))
 
 }
