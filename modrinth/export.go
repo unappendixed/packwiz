@@ -62,6 +62,30 @@ var exportCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
+		side := viper.GetString("modrinth.export.side")
+
+		if !slices.Contains([]string{"client", "server", "both"}, side) {
+			side = "both"
+		}
+
+		sidedMods := make([]*core.Mod, 0, len(mods))
+		for _, mod := range mods {
+			if side == "server" {
+				if mod.Side == "client" {
+                    fmt.Printf("Not including client mod %s in export", mod.Name)
+					continue
+				}
+			} else if side == "client" {
+				if mod.Side == "server" {
+                    fmt.Printf("Not including server mod %s in export", mod.Name)
+					continue
+				}
+			}
+			sidedMods = append(sidedMods, mod)
+		}
+
+        mods = sidedMods
+
 		fileName := viper.GetString("modrinth.export.output")
 		if fileName == "" {
 			fileName = pack.GetPackName() + ".mrpack"
@@ -142,6 +166,10 @@ var exportCmd = &cobra.Command{
 				} else if dl.Mod.Side == core.ServerSide {
 					clientEnv = "unsupported"
 					serverEnv = envInstalled
+				}
+
+				if serverEnv == "unsupported" {
+					continue
 				}
 
 				// Modrinth URLs must be RFC3986
@@ -278,6 +306,8 @@ func init() {
 	modrinthCmd.AddCommand(exportCmd)
 	exportCmd.Flags().Bool("restrictDomains", true, "Restricts domains to those allowed by modrinth.com")
 	exportCmd.Flags().StringP("output", "o", "", "The file to export the modpack to")
+	exportCmd.Flags().StringP("side", "s", "server", "The side to export mods with")
 	_ = viper.BindPFlag("modrinth.export.restrictDomains", exportCmd.Flags().Lookup("restrictDomains"))
 	_ = viper.BindPFlag("modrinth.export.output", exportCmd.Flags().Lookup("output"))
+	_ = viper.BindPFlag("modrinth.export.side", exportCmd.Flags().Lookup("side"))
 }
