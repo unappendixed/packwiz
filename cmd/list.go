@@ -74,6 +74,7 @@ var listCmd = &cobra.Command{
                 Source string `json:"source"`
                 Slug string `json:"slug"`
                 DownloadUrl string `json:"downloadUrl"`
+                Side string `json:"side"`
             }
 
             modInfos := make([]modInfo, 0, len(mods))
@@ -95,6 +96,7 @@ var listCmd = &cobra.Command{
                     Slug: strings.ReplaceAll(metaPath, ".pw.toml", ""),
                     Source: source,
                     DownloadUrl: mod.Download.URL,
+                    Side: mod.Side,
                 }
 
                 modInfos = append(modInfos, info)
